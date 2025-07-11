@@ -12,9 +12,9 @@ name = "mathlib"
 scope = "leanprover-community"
 
 [[lean_lib]]
-name = "MyModule"
+name = "Utils"
 
 [[lean_exe]]
 name = "pushout_boolean_algebras"
 root = "Main"
-default = true 
+default = true
