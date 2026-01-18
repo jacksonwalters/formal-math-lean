@@ -1,2 +1,5 @@
 # formal-math-lean
-Constructions in Lean, a formal computer mathematics system
+
+This is a collection of formalized math constructions and proofs in Lean.
+
+- countable atomless Boolean algebra
