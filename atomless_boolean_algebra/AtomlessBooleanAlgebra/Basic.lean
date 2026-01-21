@@ -79,7 +79,7 @@ lemma cylinder_intersection {n m : ℕ} (s : BitString n) (t : BitString m) :
     cylinder s ∩ cylinder t =
       match p with
       | none => ∅
-      | some ⟨k, u⟩ => cylinder u := by
+      | some ⟨_, u⟩ => cylinder u := by
   by_cases h : compatible s t
   · -- compatible case: intersection is a cylinder
     obtain ⟨p, hp⟩ := compatible_inter h
@@ -105,7 +105,27 @@ def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
     simp only [Set.mem_union, Set.mem_iUnion, Finset.mem_union, Sigma.exists, exists_prop]
     aesop
 
-  infClosed' := by sorry
+  infClosed' := by
+    intro A hA B hB
+    obtain ⟨SA, hA_eq⟩ := hA
+    obtain ⟨SB, hB_eq⟩ := hB
+    -- Goal: show that the intersection is also a finite union of cylinders
+    -- The intersection of two finite unions is a finite union of intersections by De Morgan's law
+    -- Each intersection of two cylinders is either empty or a cylinder by the above lemma
+    -- Use biUnion to construct the intersection set
+    let SI : Finset (Σ n, BitString n) :=
+      (SA.product SB).biUnion (fun ⟨p, q⟩ =>
+        match (cylinder_intersection p.2 q.2).choose with
+        | none => ∅
+        | some u => {u})
+    use SI
+    rw [hA_eq, hB_eq]
+    ext x
+    change x ∈ (⋃ p ∈ SA, cylinder p.snd) ∩ (⋃ p ∈ SB, cylinder p.snd) ↔ _
+    rw [Set.iUnion_inter_iUnion]
+    simp only [Set.mem_iUnion, Finset.mem_product, Sigma.exists, exists_prop]
+    sorry
+
 
   compl_mem' := by sorry
 
