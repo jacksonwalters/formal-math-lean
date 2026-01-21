@@ -1,7 +1,6 @@
 import Mathlib.Data.Bool.Basic
 import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Set.Basic
--- import Mathlib.Data.Set.Lattice
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Union
 import Mathlib.Order.Filter.Ultrafilter.Defs
