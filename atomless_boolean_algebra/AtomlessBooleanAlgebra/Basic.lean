@@ -24,6 +24,57 @@ def cylinder {n : ℕ} (s : BitString n) : Set Cantor :=
 def compatible {n m : ℕ} (s : BitString n) (t : BitString m) : Prop :=
   ∀ (i : ℕ) (hn : i < n) (hm : i < m), s ⟨i, hn⟩ = t ⟨i, hm⟩
 
+lemma incompatible_empty
+  {n m : ℕ} {s : BitString n} {t : BitString m}
+  (h : ¬ compatible s t) :
+  cylinder s ∩ cylinder t = ∅ := by
+  ext x
+  simp only [mem_inter_iff, cylinder, Set.mem_setOf_eq, mem_empty_iff_false]
+  constructor
+  · intro ⟨hx_s, hx_t⟩
+    simp only [compatible, not_forall] at h
+    obtain ⟨i, hn, hm, hneq⟩ := h
+    have eq_s : x i = s ⟨i, hn⟩ := hx_s ⟨i, hn⟩
+    have eq_t : x i = t ⟨i, hm⟩ := hx_t ⟨i, hm⟩
+    rw [eq_s] at eq_t
+    exact hneq eq_t
+  · intro hx
+    exact False.elim hx
+
+lemma compatible_inter {n m : ℕ} {s : BitString n} {t : BitString m} (h : compatible s t) :
+    ∃ (p : Σ k, BitString k), cylinder s ∩ cylinder t = cylinder p.2 := by
+  cases le_total n m with
+  | inl hle =>
+    -- Case: n ≤ m. The intersection is the longer one (t).
+    use ⟨m, t⟩
+    ext x
+    simp only [mem_inter_iff, cylinder, mem_setOf_eq]
+    constructor
+    · intro ⟨_, ht⟩; exact ht
+    · intro ht
+      refine ⟨?_, ht⟩
+      intro i
+      -- Since i < n and n ≤ m, then i < m.
+      have hi_m : i.val < m := Nat.lt_of_lt_of_le i.isLt hle
+      -- Use the compatibility property
+      rw [h i.val i.isLt hi_m]
+      exact ht ⟨i.val, hi_m⟩
+  | inr hle =>
+    -- Case: m ≤ n. The intersection is the longer one (s).
+    use ⟨n, s⟩
+    ext x
+    simp only [mem_inter_iff, cylinder, mem_setOf_eq]
+    constructor
+    · intro ⟨hs, _⟩; exact hs
+    · intro hs
+      refine ⟨hs, ?_⟩
+      intro i
+      have hi_n : i.val < n := Nat.lt_of_lt_of_le i.isLt hle
+      -- Use the symmetric compatibility property
+      rw [← h i.val hi_n i.isLt]
+      exact hs ⟨i.val, hi_n⟩
+
+
 def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
   carrier := { A | ∃ S : Finset (Σ n, BitString n), A = ⋃ p ∈ S, cylinder p.2 }
 
