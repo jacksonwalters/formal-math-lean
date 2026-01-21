@@ -21,6 +21,9 @@ def BitString (n : ℕ) := Fin n → Bool deriving DecidableEq
 def cylinder {n : ℕ} (s : BitString n) : Set Cantor :=
   { x | ∀ i : Fin n, x i = s i }
 
+def compatible {n m : ℕ} (s : BitString n) (t : BitString m) : Prop :=
+  ∀ (i : ℕ) (hn : i < n) (hm : i < m), s ⟨i, hn⟩ = t ⟨i, hm⟩
+
 def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
   carrier := { A | ∃ S : Finset (Σ n, BitString n), A = ⋃ p ∈ S, cylinder p.2 }
 
