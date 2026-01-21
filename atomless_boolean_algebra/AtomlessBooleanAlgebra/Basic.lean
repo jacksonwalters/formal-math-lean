@@ -74,6 +74,18 @@ lemma compatible_inter {n m : ℕ} {s : BitString n} {t : BitString m} (h : comp
       rw [← h i.val hi_n i.isLt]
       exact hs ⟨i.val, hi_n⟩
 
+lemma cylinder_intersection {n m : ℕ} (s : BitString n) (t : BitString m) :
+  ∃ (p : Option (Σ k, BitString k)),
+    cylinder s ∩ cylinder t =
+      match p with
+      | none => ∅
+      | some ⟨k, u⟩ => cylinder u := by
+  by_cases h : compatible s t
+  · -- compatible case: intersection is a cylinder
+    obtain ⟨p, hp⟩ := compatible_inter h
+    exact ⟨some p, hp⟩
+  · -- incompatible case: intersection is empty
+    exact ⟨none, incompatible_empty h⟩
 
 def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
   carrier := { A | ∃ S : Finset (Σ n, BitString n), A = ⋃ p ∈ S, cylinder p.2 }
