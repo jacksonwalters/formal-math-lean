@@ -129,7 +129,16 @@ def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
       obtain ⟨ab_in_SA, x_in_cyl_b⟩ := hx0
       obtain ⟨a1b1_in_SB, x_in_cyl_b1⟩ := hx1
       let inter := cylinder_intersection b b1
-      sorry
+      have spec := inter.choose_spec
+      cases h_match : inter.choose with
+      | none =>
+        rw [h_match] at spec
+        simp only at spec
+        have h_x_in_inter : x ∈ cylinder b ∩ cylinder b1 := ⟨x_in_cyl_b, x_in_cyl_b1⟩
+        rw [spec] at h_x_in_inter
+        exact h_x_in_inter.elim
+      | some =>
+        sorry
 
   compl_mem' := by sorry
 
