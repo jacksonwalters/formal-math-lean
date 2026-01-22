@@ -137,8 +137,21 @@ def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
         have h_x_in_inter : x ∈ cylinder b ∩ cylinder b1 := ⟨x_in_cyl_b, x_in_cyl_b1⟩
         rw [spec] at h_x_in_inter
         exact h_x_in_inter.elim
-      | some =>
-        sorry
+      | some u =>
+        rw [h_match] at spec
+        simp only at spec
+        use u.fst, u.snd
+        constructor
+        · -- Show ⟨u.fst, u.snd⟩ ∈ SI
+          simp [SI]
+          use a, b, ab_in_SA, a1, b1, a1b1_in_SB
+          rw [h_match]
+          simp
+        · -- Show x ∈ cylinder u.snd
+          rw [← spec]
+          exact ⟨x_in_cyl_b, x_in_cyl_b1⟩
+    · -- Backward direction
+      sorry
 
   compl_mem' := by sorry
 
