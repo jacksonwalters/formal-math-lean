@@ -108,7 +108,7 @@ def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
     intro A hA B hB
     obtain ⟨SA, hA_eq⟩ := hA
     obtain ⟨SB, hB_eq⟩ := hB
-    -- Goal: show that the intersection is also a finite union of cylinders
+    -- Goal: show that the intersection of two elements is also a finite union of cylinders
     -- The intersection of two finite unions is a finite union of intersections by De Morgan's law
     -- Each intersection of two cylinders is either empty or a cylinder by the above lemma
     -- Use biUnion to construct the intersection set
@@ -122,9 +122,14 @@ def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
     ext x
     change x ∈ (⋃ p ∈ SA, cylinder p.snd) ∩ (⋃ p ∈ SB, cylinder p.snd) ↔ _
     rw [Set.iUnion_inter_iUnion]
-    simp only [Set.mem_iUnion, Finset.mem_product, Sigma.exists, exists_prop]
-    sorry
-
+    simp only [Set.mem_inter_iff, Set.mem_iUnion, Sigma.exists, exists_prop]
+    constructor
+    · intro hx
+      obtain ⟨a,b,a1,b1,hx0,hx1⟩ := hx
+      obtain ⟨ab_in_SA, x_in_cyl_b⟩ := hx0
+      obtain ⟨a1b1_in_SB, x_in_cyl_b1⟩ := hx1
+      let inter := cylinder_intersection b b1
+      sorry
 
   compl_mem' := by sorry
 
