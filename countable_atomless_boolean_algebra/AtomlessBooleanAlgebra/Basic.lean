@@ -2,6 +2,7 @@ import Mathlib.Data.Bool.Basic
 import Mathlib.Data.Nat.Basic
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Fintype.Pi
 import Mathlib.Data.Finset.Union
 import Mathlib.Order.Filter.Ultrafilter.Defs
 import Mathlib.Order.BooleanSubalgebra
@@ -15,7 +16,7 @@ namespace AtomlessBooleanAlgebra
 
 def Cantor := ℕ → Bool
 
-def BitString (n : ℕ) := Fin n → Bool deriving DecidableEq
+def BitString (n : ℕ) := Fin n → Bool deriving DecidableEq, Fintype
 
 def cylinder {n : ℕ} (s : BitString n) : Set Cantor :=
   { x | ∀ i : Fin n, x i = s i }
@@ -86,6 +87,159 @@ lemma cylinder_intersection {n m : ℕ} (s : BitString n) (t : BitString m) :
   · -- incompatible case: intersection is empty
     exact ⟨none, incompatible_empty h⟩
 
+lemma cylinder_compl_finite {n : ℕ} (s : BitString n) :
+    ∃ S : Finset (Σ k, BitString k), (cylinder s)ᶜ = ⋃ p ∈ S, cylinder p.2 := by
+  let emb : BitString n ↪ Σ k, BitString k := {
+    toFun := fun t => ⟨n, t⟩
+    inj' := by
+      intro a b h
+      cases h
+      rfl
+  }
+  use (Finset.univ.erase s).map emb
+  ext x
+  constructor
+  · intro hx
+    let t : BitString n := fun i => x i
+    have ht_ne : t ≠ s := by
+      intro ht_eq
+      apply hx
+      intro i
+      rw [← ht_eq]
+    have ht_mem : (⟨n, t⟩ : Σ k, BitString k) ∈ (Finset.univ.erase s).map emb := by
+      rw [Finset.mem_map]
+      refine ⟨t, ?_, rfl⟩
+      rw [Finset.mem_erase]
+      exact ⟨ht_ne, Finset.mem_univ t⟩
+    simp only [Set.mem_iUnion]
+    exact ⟨⟨n, t⟩, ht_mem, by intro i; rfl⟩
+  · intro hx
+    simp only [Set.mem_iUnion] at hx
+    obtain ⟨p, hpS, hxp⟩ := hx
+    rw [Finset.mem_map] at hpS
+    obtain ⟨t, htErase, hp_eq⟩ := hpS
+    rw [← hp_eq] at hxp
+    rw [Finset.mem_erase] at htErase
+    obtain ⟨ht_ne, _⟩ := htErase
+    intro hxs
+    have ht_eq : t = s := by
+      funext i
+      exact (hxp i).symm.trans (hxs i)
+    exact ht_ne ht_eq
+
+lemma finite_union_cylinders_inter {A B : Set Cantor}
+    (hA : ∃ S : Finset (Σ n, BitString n), A = ⋃ p ∈ S, cylinder p.2)
+    (hB : ∃ S : Finset (Σ n, BitString n), B = ⋃ p ∈ S, cylinder p.2) :
+    ∃ S : Finset (Σ n, BitString n), A ∩ B = ⋃ p ∈ S, cylinder p.2 := by
+  obtain ⟨SA, hA_eq⟩ := hA
+  obtain ⟨SB, hB_eq⟩ := hB
+  let SI : Finset (Σ n, BitString n) :=
+    (SA.product SB).biUnion (fun ⟨p, q⟩ =>
+      match (cylinder_intersection p.2 q.2).choose with
+      | none => ∅
+      | some u => {u})
+  use SI
+  rw [hA_eq, hB_eq]
+  ext x
+  change x ∈ (⋃ p ∈ SA, cylinder p.snd) ∩ (⋃ p ∈ SB, cylinder p.snd) ↔ _
+  rw [Set.iUnion_inter_iUnion]
+  simp only [Set.mem_inter_iff, Set.mem_iUnion, Sigma.exists, exists_prop]
+  constructor
+  · intro hx
+    obtain ⟨a,b,a1,b1,hx0,hx1⟩ := hx
+    obtain ⟨ab_in_SA, x_in_cyl_b⟩ := hx0
+    obtain ⟨a1b1_in_SB, x_in_cyl_b1⟩ := hx1
+    let inter := cylinder_intersection b b1
+    have spec := inter.choose_spec
+    cases h_match : inter.choose with
+    | none =>
+      rw [h_match] at spec
+      simp only at spec
+      have h_x_in_inter : x ∈ cylinder b ∩ cylinder b1 := ⟨x_in_cyl_b, x_in_cyl_b1⟩
+      rw [spec] at h_x_in_inter
+      exact h_x_in_inter.elim
+    | some u =>
+      rw [h_match] at spec
+      simp only at spec
+      use u.fst, u.snd
+      constructor
+      · change (⟨u.fst, u.snd⟩ : Σ n, BitString n) ∈
+          (SA.product SB).biUnion (fun ⟨p, q⟩ =>
+            match (cylinder_intersection p.2 q.2).choose with
+            | none => ∅
+            | some u => {u})
+        rw [Finset.mem_biUnion]
+        refine ⟨(⟨a, b⟩, ⟨a1, b1⟩), ?_, ?_⟩
+        · exact Finset.mk_mem_product ab_in_SA a1b1_in_SB
+        · change (⟨u.fst, u.snd⟩ : Σ n, BitString n) ∈
+            match inter.choose with
+            | none => ∅
+            | some v => {v}
+          rw [h_match]
+          simp only [Finset.mem_singleton]
+      · rw [← spec]
+        exact ⟨x_in_cyl_b, x_in_cyl_b1⟩
+  · intro hx
+    obtain ⟨k, u, huSI, hxu⟩ := hx
+    change (⟨k, u⟩ : Σ n, BitString n) ∈
+      (SA.product SB).biUnion (fun ⟨p, q⟩ =>
+        match (cylinder_intersection p.2 q.2).choose with
+        | none => ∅
+        | some u => {u}) at huSI
+    rw [Finset.mem_biUnion] at huSI
+    obtain ⟨pq, hpq, hu_mem⟩ := huSI
+    obtain ⟨⟨n, s⟩, ⟨m, t⟩⟩ := pq
+    have hsSA : (⟨n, s⟩ : Σ n, BitString n) ∈ SA := (Finset.mem_product.mp hpq).1
+    have htSB : (⟨m, t⟩ : Σ n, BitString n) ∈ SB := (Finset.mem_product.mp hpq).2
+    let inter := cylinder_intersection s t
+    have spec := inter.choose_spec
+    change (⟨k, u⟩ : Σ n, BitString n) ∈
+      match inter.choose with
+      | none => ∅
+      | some v => {v} at hu_mem
+    cases hchoose : inter.choose with
+    | none =>
+      rw [hchoose] at hu_mem
+      simp at hu_mem
+    | some v =>
+      rw [hchoose] at spec
+      simp only at spec
+      rw [hchoose] at hu_mem
+      simp only [Finset.mem_singleton] at hu_mem
+      rw [← hu_mem] at spec
+      have hx_inter : x ∈ cylinder s ∩ cylinder t := by
+        rw [spec]
+        exact hxu
+      exact ⟨n, s, m, t, ⟨hsSA, hx_inter.1⟩, ⟨htSB, hx_inter.2⟩⟩
+
+lemma finite_union_cylinders_compl {A : Set Cantor}
+    (hA : ∃ S : Finset (Σ n, BitString n), A = ⋃ p ∈ S, cylinder p.2) :
+    ∃ S : Finset (Σ n, BitString n), Aᶜ = ⋃ p ∈ S, cylinder p.2 := by
+  obtain ⟨S, hA_eq⟩ := hA
+  have hcomp :
+      ∀ S : Finset (Σ n, BitString n),
+        ∃ T : Finset (Σ n, BitString n),
+          ((⋃ p ∈ S, cylinder p.2 : Set Cantor)ᶜ = ⋃ p ∈ T, cylinder p.2) := by
+    intro S
+    induction S using Finset.induction_on with
+    | empty =>
+      use {⟨0, (fun i => false : BitString 0)⟩}
+      ext x
+      simp [cylinder]
+    | insert p S hp_not_mem ih =>
+      obtain ⟨TS, hTS⟩ := ih
+      obtain ⟨TC, hTC⟩ := cylinder_compl_finite p.2
+      obtain ⟨TI, hTI⟩ :=
+        finite_union_cylinders_inter ⟨TC, hTC⟩ ⟨TS, hTS⟩
+      use TI
+      rw [← hTI]
+      ext x
+      simp [Finset.mem_insert]
+  obtain ⟨T, hT⟩ := hcomp S
+  use T
+  rw [hA_eq]
+  exact hT
+
 def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
   carrier := { A | ∃ S : Finset (Σ n, BitString n), A = ⋃ p ∈ S, cylinder p.2 }
 
@@ -106,54 +260,11 @@ def CountableAtomlessBA : BooleanSubalgebra (Set Cantor) where
 
   infClosed' := by
     intro A hA B hB
-    obtain ⟨SA, hA_eq⟩ := hA
-    obtain ⟨SB, hB_eq⟩ := hB
-    -- Goal: show that the intersection of two elements is also a finite union of cylinders
-    -- The intersection of two finite unions is a finite union of intersections by De Morgan's law
-    -- Each intersection of two cylinders is either empty or a cylinder by the above lemma
-    -- Use biUnion to construct the intersection set
-    let SI : Finset (Σ n, BitString n) :=
-      (SA.product SB).biUnion (fun ⟨p, q⟩ =>
-        match (cylinder_intersection p.2 q.2).choose with
-        | none => ∅
-        | some u => {u})
-    use SI
-    rw [hA_eq, hB_eq]
-    ext x
-    change x ∈ (⋃ p ∈ SA, cylinder p.snd) ∩ (⋃ p ∈ SB, cylinder p.snd) ↔ _
-    rw [Set.iUnion_inter_iUnion]
-    simp only [Set.mem_inter_iff, Set.mem_iUnion, Sigma.exists, exists_prop]
-    constructor
-    · intro hx
-      obtain ⟨a,b,a1,b1,hx0,hx1⟩ := hx
-      obtain ⟨ab_in_SA, x_in_cyl_b⟩ := hx0
-      obtain ⟨a1b1_in_SB, x_in_cyl_b1⟩ := hx1
-      let inter := cylinder_intersection b b1
-      have spec := inter.choose_spec
-      cases h_match : inter.choose with
-      | none =>
-        rw [h_match] at spec
-        simp only at spec
-        have h_x_in_inter : x ∈ cylinder b ∩ cylinder b1 := ⟨x_in_cyl_b, x_in_cyl_b1⟩
-        rw [spec] at h_x_in_inter
-        exact h_x_in_inter.elim
-      | some u =>
-        rw [h_match] at spec
-        simp only at spec
-        use u.fst, u.snd
-        constructor
-        · -- Show ⟨u.fst, u.snd⟩ ∈ SI
-          simp [SI]
-          use a, b, ab_in_SA, a1, b1, a1b1_in_SB
-          rw [h_match]
-          simp
-        · -- Show x ∈ cylinder u.snd
-          rw [← spec]
-          exact ⟨x_in_cyl_b, x_in_cyl_b1⟩
-    · -- Backward direction
-      sorry
+    exact finite_union_cylinders_inter hA hB
 
-  compl_mem' := by sorry
+  compl_mem' := by
+    intro A hA
+    exact finite_union_cylinders_compl hA
 
 def update {n : ℕ} (s : BitString n) (k : Fin n) (b : Bool) : BitString n :=
   fun i => if i = k then b else s i
